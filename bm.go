@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -97,15 +98,20 @@ func main() {
 			if !strings.Contains(url, "http") {
 				url = "http://" + url
 			}
-			bm.m[url] = Bookmark{Title: getTitle(url), URL: url, Modified: time.Now(), Category: "default"}
+			bm.m[time.Now().String()] = Bookmark{Title: getTitle(url), URL: url, Modified: time.Now(), Category: "default"}
 			bm.Unlock()
 			bm.Save()
 			http.Redirect(w, r, "/mybookmarks", 302)
 		}
 		if strings.Contains(url, "bookmarks") {
-			for k, v := range bm.m {
+			var keys []string
+			for k, _ := range bm.m {
+				keys = append(keys, k)
+			}
+			sort.Sort(sort.Reverse(sort.StringSlice(keys)))
+			for _, v := range keys {
 				//fmt.Fprintf(w, "<a href='%s'>%s</a> => %s<br>", k, k, v)
-				fmt.Fprintf(w, "<a href='%s'>%s</a> %s<br>", k, v.Title, v.Modified)
+				fmt.Fprintf(w, "<a href='%s'>%s</a> %s<br>", v, bm.m[v].Title, bm.m[v].Modified)
 			}
 		}
 	})
