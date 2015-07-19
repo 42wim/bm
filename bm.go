@@ -14,6 +14,7 @@ import (
 
 	"golang.org/x/net/html"
 
+	"github.com/dustin/go-humanize"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -110,8 +111,7 @@ func main() {
 			}
 			sort.Sort(sort.Reverse(sort.StringSlice(keys)))
 			for _, v := range keys {
-				//fmt.Fprintf(w, "<a href='%s'>%s</a> => %s<br>", k, k, v)
-				fmt.Fprintf(w, "<a href='%s'>%s</a> %s<br>", v, bm.m[v].Title, bm.m[v].Modified)
+				fmt.Fprintf(w, "<a href='%s'>%s</a> %s<br>", v, bm.m[v].Title, humanize.Time(bm.m[v].Modified))
 			}
 		}
 	})
