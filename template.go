@@ -23,6 +23,7 @@ const bmTemplate = `
             <tr>
                 <th>URL</th>
                 <th>Last modified</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -35,6 +36,7 @@ const bmTemplate = `
 								<tr>
 									<td> <a href={{$value.URL}}>{{ $value.Title }}</a></td>
 									<td> {{ humanize $value.Modified }}</td>
+									<td> <a href='/remove/{{ $key }}'>remove</a></td>
 								</tr>
 								{{ end }}
 							{{end}}

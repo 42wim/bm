@@ -39,27 +39,27 @@ func (bm *Bookmarks) Save(url string) {
 	if url == "" {
 		return
 	}
+	if bm.Exists(url) {
+		return
+	}
 
 	bm.Lock()
-	// no duplicate urls
-	for _, v := range bm.Bmap {
-		if v.URL == url {
-			bm.Unlock()
-			return
-		}
-	}
 	bm.Bmap[time.Now().String()] = Bookmark{Title: getTitle(url), URL: url, Modified: time.Now(), Category: "default"}
 	bm.Unlock()
 
-	bm.RLock()
 	bm.sort()
+	bm.SaveFile()
+}
+
+func (bm *Bookmarks) SaveFile() {
+	bm.RLock()
+	defer bm.RUnlock()
 	res, err := json.Marshal(bm.Bmap)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	ioutil.WriteFile(flagFile, res, 0644)
-	bm.RUnlock()
 }
 
 func (bm *Bookmarks) Load() {
@@ -69,12 +69,40 @@ func (bm *Bookmarks) Load() {
 }
 
 func (bm *Bookmarks) sort() {
+	bm.RLock()
+	defer bm.RUnlock()
 	var keys []string
 	for k, _ := range bm.Bmap {
 		keys = append(keys, k)
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
 	bm.Sorted = keys
+}
+
+func (bm *Bookmarks) Delete(key string) {
+	bm.Lock()
+	delete(bm.Bmap, key)
+	bm.Unlock()
+	bm.sort()
+	bm.SaveFile()
+}
+
+func (bm *Bookmarks) Exists(url string) bool {
+	bm.RLock()
+	defer bm.RUnlock()
+	for _, v := range bm.Bmap {
+		if v.URL == url {
+			return true
+		}
+	}
+	return false
+}
+
+func init() {
+	flag.StringVar(&flagPort, "port", "8889", "port the webserver listens on")
+	flag.StringVar(&flagFile, "file", "bm.json", "file to save bm")
+	flag.StringVar(&flagHost, "host", "", "hostname to listen on")
+	flag.Parse()
 }
 
 func getTitle(url string) string {
@@ -105,13 +133,6 @@ func getTitle(url string) string {
 	}
 }
 
-func init() {
-	flag.StringVar(&flagPort, "port", "8889", "port the webserver listens on")
-	flag.StringVar(&flagFile, "file", "bm.json", "file to save bm")
-	flag.StringVar(&flagHost, "host", "", "hostname to listen on")
-	flag.Parse()
-}
-
 func parseURL(url string) string {
 	if strings.Contains(url, ".") {
 		if strings.Contains(url, "favicon.ico") {
@@ -125,6 +146,13 @@ func parseURL(url string) string {
 	return ""
 }
 
+func showBookmarks(bm Bookmarks, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	bm.RLock()
+	defer bm.RUnlock()
+	t, _ := template.New("").Funcs(template.FuncMap{"humanize": humanize.Time}).Parse(bmTemplate)
+	t.Execute(w, bm)
+}
+
 func main() {
 	bm := Bookmarks{Bmap: make(map[string]Bookmark)}
 	bm.Load()
@@ -132,6 +160,7 @@ func main() {
 	// these two statements below are actually the reason we need to use a 3rd party lib
 	router.RedirectFixedPath = false
 	router.RedirectTrailingSlash = false
+
 	router.GET("/*url", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if flagHost != "" {
 			if r.Host != flagHost {
@@ -139,15 +168,21 @@ func main() {
 			}
 		}
 		url := ps.ByName("url")[1:]
-		if strings.Contains(url, "mybookmarks") {
-			bm.RLock()
-			t, _ := template.New("").Funcs(template.FuncMap{"humanize": humanize.Time}).Parse(bmTemplate)
-			t.Execute(w, bm)
-			bm.RUnlock()
-		} else {
-			bm.Save(url)
+
+		if strings.HasPrefix(url, "remove/") {
+			keys := strings.Split(url, "/")
+			bm.Delete(keys[1])
 			http.Redirect(w, r, "/mybookmarks", 302)
+			return
 		}
+
+		if strings.HasPrefix(url, "mybookmarks") {
+			showBookmarks(bm, w, r, ps)
+			return
+		}
+
+		bm.Save(url)
+		http.Redirect(w, r, "/mybookmarks", 302)
 	})
 	fmt.Println("starting webserver on " + flagPort)
 	log.Fatal(http.ListenAndServe(":"+flagPort, router))
