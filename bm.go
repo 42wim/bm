@@ -128,10 +128,11 @@ func getTitle(url string) string {
 		token := d.Token()
 		if string(token.Data) == "title" {
 			d.Next()
-			if string(d.Text()) == "" {
+			text := d.Text()
+			if string(text) == "" {
 				return url
 			}
-			return string(d.Text())
+			return string(text)
 		}
 	}
 	return url
