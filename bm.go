@@ -32,7 +32,7 @@ type Bookmark struct {
 	Modified time.Time
 }
 
-var flagFile, flagPort, flagHost string
+var flagFile, flagPort, flagHost, flagSecret string
 
 func (bm *Bookmarks) Save(url string) {
 	url = parseURL(url)
@@ -102,6 +102,7 @@ func init() {
 	flag.StringVar(&flagPort, "port", "8889", "port the webserver listens on")
 	flag.StringVar(&flagFile, "file", "bm.json", "file to save bm")
 	flag.StringVar(&flagHost, "host", "", "hostname to listen on")
+	flag.StringVar(&flagSecret, "secret", "secret", "secret cookie url to auth on")
 	flag.Parse()
 }
 
@@ -158,6 +159,22 @@ func showBookmarks(bm Bookmarks, w http.ResponseWriter, r *http.Request, ps http
 	t.Execute(w, bm)
 }
 
+func checkAuth(r *http.Request) bool {
+	cookie, err := r.Cookie("bm")
+	if err != nil {
+		return false
+	}
+	if cookie.Value != flagSecret {
+		return false
+	}
+	if flagHost != "" {
+		if r.Host != flagHost {
+			return false
+		}
+	}
+	return true
+}
+
 func main() {
 	bm := Bookmarks{Bmap: make(map[string]Bookmark)}
 	bm.Load()
@@ -167,20 +184,24 @@ func main() {
 	router.RedirectTrailingSlash = false
 
 	router.GET("/*url", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		if flagHost != "" {
-			if r.Host != flagHost {
-				return
-			}
-		}
 		url := ps.ByName("url")[1:]
 
+		if strings.HasPrefix(url, flagSecret) {
+			http.SetCookie(w, &http.Cookie{Name: "bm", Value: flagSecret, Expires: time.Now().Add(90000 * time.Hour),
+				Domain: flagHost, Path: "/"})
+			http.Redirect(w, r, "/mybookmarks", 302)
+			return
+		}
+		if checkAuth(r) == false {
+			fmt.Fprintf(w, "access denied")
+			return
+		}
 		if strings.HasPrefix(url, "remove/") {
 			keys := strings.Split(url, "/")
 			bm.Delete(keys[1])
 			http.Redirect(w, r, "/mybookmarks", 302)
 			return
 		}
-
 		if strings.HasPrefix(url, "mybookmarks") {
 			showBookmarks(bm, w, r, ps)
 			return
