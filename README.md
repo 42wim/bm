@@ -1,16 +1,6 @@
 # bm
 bookmark tool inspired by saved.io
 
-Authorize yourself one time by going to http://yourserverrunningbm.tld/secret (specify with -secret flag, this sets a cookie) 
-
-Type the site you're running this on before the URL you want to bookmark. 
-
-e.g. If you want to bookmark xkcd.com you go to http://yourserverrunningbm.tld/xkcd.com
-
-See your bookmarks by going to /mybookmarks. 
-
-Bookmarks are saved in bm.json
-
 # usage
 ```
 Usage of ./bm:
@@ -24,5 +14,28 @@ Usage of ./bm:
 bm -host myserver.tld -port 80 -secret mysecret
 ```
 
+Authorize yourself one time by going to http://myserver.tld/mysecret (specified with -secret flag, this sets a cookie) 
+
+Type the site you're running this on before the URL you want to bookmark. 
+
+e.g. If you want to bookmark xkcd.com you go to http://myserver.tld/xkcd.com
+
+See your bookmarks by going to / or /mybookmarks. 
+
+Bookmarks are saved in bm.json 
+
+
 # screenshot
  ![screenshot](http://i.snag.gy/hvK98.jpg)
+
+# Building
+ Make sure you have [Go](https://golang.org/doc/install) properly installed, including setting up your [GOPATH](https://golang.org/doc/code.html#GOPATH)
+
+Next, run
+
+ ```
+ $ cd $GOPATH
+ $ go get github.com/42wim/bm
+ ```
+
+ You'll have the binary 'bm' in $GOPATH/bin
