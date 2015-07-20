@@ -39,7 +39,15 @@ func (bm *Bookmarks) Save(url string) {
 	if url == "" {
 		return
 	}
+
 	bm.Lock()
+	// no duplicate urls
+	for _, v := range bm.Bmap {
+		if v.URL == url {
+			bm.Unlock()
+			return
+		}
+	}
 	bm.Bmap[time.Now().String()] = Bookmark{Title: getTitle(url), URL: url, Modified: time.Now(), Category: "default"}
 	bm.Unlock()
 
@@ -48,9 +56,10 @@ func (bm *Bookmarks) Save(url string) {
 	res, err := json.Marshal(bm.Bmap)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
-	bm.RUnlock()
 	ioutil.WriteFile(flagFile, res, 0644)
+	bm.RUnlock()
 }
 
 func (bm *Bookmarks) Load() {
