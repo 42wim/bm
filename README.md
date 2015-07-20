@@ -10,6 +10,7 @@ Bookmarks are saved in bm.json
 # usage
 ```
 Usage of ./bm:
-  -file="bm.json": file to save bookmarks
+  -file="bm.json": file to save bm
+  -host="": hostname to listen on (like apache virtualhost)
   -port="8889": port the webserver listens on
 ```
