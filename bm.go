@@ -110,13 +110,13 @@ func getTitle(url string) string {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Println(err)
-		return ""
+		return url
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:6.0) Gecko/20110814 Firefox/6.0")
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err)
-		return ""
+		return url
 	}
 	defer resp.Body.Close()
 	d := html.NewTokenizer(resp.Body)
@@ -128,9 +128,13 @@ func getTitle(url string) string {
 		token := d.Token()
 		if string(token.Data) == "title" {
 			d.Next()
+			if string(d.Text()) == "" {
+				return url
+			}
 			return string(d.Text())
 		}
 	}
+	return url
 }
 
 func parseURL(url string) string {
