@@ -29,12 +29,12 @@ Bookmarks are saved in bm.json
  ![screenshot](http://i.snag.gy/hvK98.jpg)
 
 # Building
- Make sure you have [Go](https://golang.org/doc/install) properly installed, including setting up your [GOPATH](https://golang.org/doc/code.html#GOPATH)
+ Make sure you have [Go](https://golang.org/doc/install) properly installed.
+ Requires go1.12+
 
 Next, run
 
  ```
- $ cd $GOPATH
  $ go get github.com/42wim/bm
  ```
 
