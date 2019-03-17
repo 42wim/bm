@@ -1,0 +1,7 @@
+# github.com/dustin/go-humanize v1.0.0
+github.com/dustin/go-humanize
+# github.com/julienschmidt/httprouter v1.2.0
+github.com/julienschmidt/httprouter
+# golang.org/x/net v0.0.0-20190313220215-9f648a60d977
+golang.org/x/net/html
+golang.org/x/net/html/atom
