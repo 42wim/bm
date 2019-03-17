@@ -72,7 +72,7 @@ func (bm *Bookmarks) sort() {
 	bm.RLock()
 	defer bm.RUnlock()
 	var keys []string
-	for k, _ := range bm.Bmap {
+	for k := range bm.Bmap {
 		keys = append(keys, k)
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(keys)))
@@ -98,14 +98,6 @@ func (bm *Bookmarks) Exists(url string) bool {
 	return false
 }
 
-func init() {
-	flag.StringVar(&flagPort, "port", "8889", "port the webserver listens on")
-	flag.StringVar(&flagFile, "file", "bm.json", "file to save bm")
-	flag.StringVar(&flagHost, "host", "", "hostname to listen on")
-	flag.StringVar(&flagSecret, "secret", "secret", "secret cookie url to auth on")
-	flag.Parse()
-}
-
 func getTitle(url string) string {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
@@ -127,7 +119,7 @@ func getTitle(url string) string {
 			return ""
 		}
 		token := d.Token()
-		if string(token.Data) == "title" {
+		if token.Data == "title" {
 			d.Next()
 			text := d.Text()
 			if string(text) == "" {
@@ -136,7 +128,6 @@ func getTitle(url string) string {
 			return string(text)
 		}
 	}
-	return url
 }
 
 func parseURL(url string) string {
@@ -152,7 +143,7 @@ func parseURL(url string) string {
 	return ""
 }
 
-func showBookmarks(bm Bookmarks, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func showBookmarks(bm *Bookmarks, w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	bm.RLock()
 	defer bm.RUnlock()
 	t, _ := template.New("").Funcs(template.FuncMap{"humanize": humanize.Time}).Parse(bmTemplate)
@@ -176,6 +167,12 @@ func checkAuth(r *http.Request) bool {
 }
 
 func main() {
+	flag.StringVar(&flagPort, "port", "8889", "port the webserver listens on")
+	flag.StringVar(&flagFile, "file", "bm.json", "file to save bm")
+	flag.StringVar(&flagHost, "host", "", "hostname to listen on")
+	flag.StringVar(&flagSecret, "secret", "secret", "secret cookie url to auth on")
+	flag.Parse()
+
 	bm := Bookmarks{Bmap: make(map[string]Bookmark)}
 	bm.Load()
 	router := httprouter.New()
@@ -189,26 +186,26 @@ func main() {
 		if strings.HasPrefix(url, flagSecret) {
 			http.SetCookie(w, &http.Cookie{Name: "bm", Value: flagSecret, Expires: time.Now().Add(90000 * time.Hour),
 				Domain: flagHost, Path: "/"})
-			http.Redirect(w, r, "/mybookmarks", 302)
+			http.Redirect(w, r, "/mybookmarks", http.StatusFound)
 			return
 		}
-		if checkAuth(r) == false {
+		if !checkAuth(r) {
 			fmt.Fprintf(w, "access denied")
 			return
 		}
 		if strings.HasPrefix(url, "remove/") {
 			keys := strings.Split(url, "/")
 			bm.Delete(keys[1])
-			http.Redirect(w, r, "/mybookmarks", 302)
+			http.Redirect(w, r, "/mybookmarks", http.StatusFound)
 			return
 		}
 		if strings.HasPrefix(url, "mybookmarks") {
-			showBookmarks(bm, w, r, ps)
+			showBookmarks(&bm, w, r, ps)
 			return
 		}
 
 		bm.Save(url)
-		http.Redirect(w, r, "/mybookmarks", 302)
+		http.Redirect(w, r, "/mybookmarks", http.StatusFound)
 	})
 	fmt.Println("starting webserver on " + flagPort)
 	log.Fatal(http.ListenAndServe(":"+flagPort, router))
